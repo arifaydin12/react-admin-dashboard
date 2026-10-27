@@ -2,7 +2,7 @@
 
 A sales analytics dashboard built with **React 19, TypeScript, Vite and Ant Design**. It turns a deterministic mock data set into KPI cards with sparklines, period-over-period comparisons, trend and breakdown charts, a server-style orders table, a command palette and a light/dark theme.
 
-**Live demo:** https://vaas125.github.io/react-admin-dashboard/
+**Live demo:** https://arifaydin12.github.io/react-admin-dashboard/
 
 ![Dashboard overview](screenshots/screenshot.png)
 
@@ -44,7 +44,7 @@ A sales analytics dashboard built with **React 19, TypeScript, Vite and Ant Desi
 ## Getting started
 
 ```bash
-git clone https://github.com/vaas125/react-admin-dashboard.git
+git clone https://github.com/arifaydin12/react-admin-dashboard.git
 cd react-admin-dashboard
 npm install
 npm run dev
@@ -102,4 +102,4 @@ src/
 
 ## License
 
-[MIT](LICENSE) © Arif Enes
+[MIT](LICENSE) © Arif Enes Aydin
