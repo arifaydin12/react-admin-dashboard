@@ -1,178 +1,206 @@
-import { Row, Col, Card, Typography } from 'antd';
-import { Column } from '@ant-design/charts';
-import {
-  ShoppingCartOutlined,
-  DollarOutlined,
-  ShoppingOutlined,
-  RiseOutlined
-} from '@ant-design/icons';
+import { useMemo, useState } from 'react'
+import { DollarOutlined, ShoppingCartOutlined, StopOutlined, TagOutlined } from '@ant-design/icons'
+import { Button, Card, Col, Row, Segmented, Table } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
+import { useNavigate } from 'react-router-dom'
+import ChartCard from '../components/ChartCard'
+import { BarChart, DonutChart, TrendChart } from '../components/charts'
+import type { TrendMetric } from '../components/charts/TrendChart'
+import DateRangeControl from '../components/DateRangeControl'
+import KpiCard from '../components/KpiCard'
+import PageHeader from '../components/PageHeader'
+import StatusTag from '../components/StatusTag'
+import { useSettings } from '../context/SettingsContext'
+import { useAnalytics } from '../hooks/useAnalytics'
+import { bucketSizeFor, breakdownBy, buildSeries, rangeLength } from '../lib/analytics'
+import { formatCurrency, formatDayKey, formatNumber, formatPercent } from '../lib/format'
+import { CATEGORIES, type Order } from '../types'
 
-import { mockSalesSummary, mockTopProducts } from '../data/mockData';
+export default function Dashboard() {
+  const analytics = useAnalytics()
+  const { settings } = useSettings()
+  const navigate = useNavigate()
+  const [metric, setMetric] = useState<TrendMetric>('revenue')
+  const { loading, range, previous, orders, previousOrders, summary, delta, hasComparison } = analytics
 
-const { Title } = Typography;
+  const series = useMemo(() => buildSeries(orders, range), [orders, range])
+  const previousSeries = useMemo(
+    () => buildSeries(previousOrders, previous, bucketSizeFor(range)),
+    [previousOrders, previous, range],
+  )
+  const categories = useMemo(() => breakdownBy(orders, 'category'), [orders])
+  const regions = useMemo(() => breakdownBy(orders, 'region'), [orders])
+  const products = useMemo(() => breakdownBy(orders, 'product').slice(0, 6), [orders])
+  const recent = useMemo(() => orders.slice(-6).reverse(), [orders])
 
-const Dashboard = () => {
-  // İstatistik kartları için veri hazırlığı
-  const statCards = [
+  const compact = settings.compactNumbers
+  const days = rangeLength(range)
+  const comparisonLabel = hasComparison ? 'vs previous period' : 'no earlier data'
+  const empty = !loading && orders.length === 0
+
+  const columns: ColumnsType<Order> = [
     {
-      title: "Toplam Satış",
-      value: mockSalesSummary.totalSales,
-      prefix: "₺",
-      precision: 2,
-      icon: <DollarOutlined style={{ fontSize: '24px', color: '#1890ff' }} />,
-      growth: mockSalesSummary.salesGrowth,
-      color: '#1890ff'
+      title: 'Order',
+      dataIndex: 'id',
+      render: (id: string) => (
+        <Button type="link" size="small" className="link-cell" onClick={() => navigate(`/sales?order=${id}`)}>
+          {id}
+        </Button>
+      ),
     },
+    { title: 'Customer', dataIndex: 'customer', responsive: ['md'] },
+    { title: 'Product', dataIndex: 'product', ellipsis: true },
     {
-      title: "Sipariş Sayısı",
-      value: mockSalesSummary.totalOrders,
-      icon: <ShoppingCartOutlined style={{ fontSize: '24px', color: '#52c41a' }} />,
-      color: '#52c41a'
+      title: 'Total',
+      dataIndex: 'amount',
+      align: 'right',
+      render: (amount: number) => <span className="num">{formatCurrency(amount)}</span>,
     },
-    {
-      title: "Ortalama Sipariş",
-      value: mockSalesSummary.averageOrderValue,
-      prefix: "₺",
-      precision: 2,
-      icon: <ShoppingOutlined style={{ fontSize: '24px', color: '#722ed1' }} />,
-      color: '#722ed1'
-    },
-    {
-      title: "Büyüme",
-      value: mockSalesSummary.salesGrowth,
-      suffix: "%",
-      precision: 1,
-      icon: <RiseOutlined style={{ fontSize: '24px', color: '#fa8c16' }} />,
-      color: '#fa8c16'
-    }
-  ];
-
-  const columnConfig = {
-    data: mockTopProducts,
-    xField: 'product',
-    yField: 'revenue',
-    label: {
-      position: 'middle',
-      style: {
-        fill: '#FFFFFF',
-        opacity: 0.8,
-        fontSize: 12,
-        fontWeight: 500,
-      },
-    },
-    meta: {
-      product: { alias: 'Ürün' },
-      revenue: { 
-        alias: 'Gelir',
-        formatter: (value: number) => `₺${value.toLocaleString('tr-TR')}`
-      },
-    },
-    animation: {
-      appear: {
-        animation: 'fade-in',
-        duration: 1000,
-      },
-    },
-    color: '#1890ff',
-    columnStyle: {
-      radius: [6, 6, 0, 0],
-      shadowColor: 'rgba(0,0,0,0.05)',
-      shadowBlur: 10,
-    },
-    tooltip: {
-      formatter: (datum: any) => ({
-        name: 'Gelir',
-        value: `₺${datum.revenue.toLocaleString('tr-TR')}`
-      })
-    },
-    padding: [30, 30, 50, 50],
-    xAxis: {
-      label: {
-        autoRotate: true,
-        autoHide: false,
-        autoEllipsis: true,
-      },
-    },
-    yAxis: {
-      label: {
-        formatter: (value: string) => `₺${parseInt(value).toLocaleString('tr-TR')}`
-      },
-    },
-  };
-
+    { title: 'Status', dataIndex: 'status', render: (status: Order['status']) => <StatusTag status={status} /> },
+  ]
 
   return (
-    <div className="dashboard-container fade-in">
-      <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
-        <Col span={24}>
-          <Card bordered={false} bodyStyle={{ padding: '24px' }}>
-            <div className="dashboard-header">
-              <Title level={2} style={{ margin: 0 }}>Satış Takip Sistemi</Title>
-              <div className="dashboard-date" style={{ 
-                background: '#f5f5f5', 
-                padding: '8px 16px', 
-                borderRadius: '6px',
-                fontSize: '14px',
-                color: '#666'
-              }}>
-                {new Date().toLocaleDateString('tr-TR', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </div>
-            </div>
-          </Card>
+    <>
+      <PageHeader
+        title="Dashboard"
+        description={`${formatDayKey(range.start)} – ${formatDayKey(range.end)} · ${days} days${
+          hasComparison ? `, compared with ${formatDayKey(previous.start)} – ${formatDayKey(previous.end)}` : ''
+        }`}
+        extra={<DateRangeControl />}
+      />
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} xl={6}>
+          <KpiCard
+            title="Revenue"
+            icon={<DollarOutlined />}
+            color="#4f46e5"
+            loading={loading}
+            value={formatCurrency(summary.revenue, { compact, whole: !compact })}
+            delta={delta.revenue}
+            trend={series.map((p) => p.revenue)}
+            comparisonLabel={comparisonLabel}
+          />
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <KpiCard
+            title="Orders"
+            icon={<ShoppingCartOutlined />}
+            color="#06b6d4"
+            loading={loading}
+            value={formatNumber(summary.orders)}
+            delta={delta.orders}
+            trend={series.map((p) => p.orders)}
+            comparisonLabel={comparisonLabel}
+          />
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <KpiCard
+            title="Average order value"
+            icon={<TagOutlined />}
+            color="#10b981"
+            loading={loading}
+            value={formatCurrency(summary.averageOrderValue)}
+            delta={delta.averageOrderValue}
+            trend={series.map((p) => (p.paidOrders > 0 ? p.revenue / p.paidOrders : 0))}
+            comparisonLabel={comparisonLabel}
+          />
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <KpiCard
+            title="Cancelled & refunded"
+            icon={<StopOutlined />}
+            color="#f59e0b"
+            loading={loading}
+            value={formatPercent(summary.lossRate)}
+            delta={delta.lossRate}
+            invertDelta
+            trend={series.map((p) => (p.orders > 0 ? p.lostOrders / p.orders : 0))}
+            comparisonLabel={comparisonLabel}
+          />
         </Col>
 
-        {/* İstatistik Kartları */}
-        {statCards.map((stat, index) => (
-          <Col xs={24} sm={12} md={12} lg={6} key={index}>
-            <Card 
-              className="stat-card" 
-              bordered={false}
-              bodyStyle={{ padding: '20px' }}
-            >
-              <div className="stat-card-content">
-                <div className="stat-card-icon" style={{ backgroundColor: `${stat.color}15`, color: stat.color }}>
-                  {stat.icon}
-                </div>
-                <div className="stat-card-info">
-                  <div className="stat-card-title">{stat.title}</div>
-                  <div className="stat-card-value">
-                    {stat.prefix}{stat.value.toLocaleString('tr-TR', { 
-                      minimumFractionDigits: stat.precision || 0,
-                      maximumFractionDigits: stat.precision || 0
-                    })}{stat.suffix}
-                  </div>
-                  {stat.growth !== undefined && (
-                    <div className={`stat-card-growth ${stat.growth >= 0 ? 'positive' : 'negative'}`}>
-                      {stat.growth >= 0 ? '↑' : '↓'} {Math.abs(stat.growth)}%
-                      <span className="growth-label">geçen aya göre</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
-          </Col>
-        ))}
-
-        {/* Grafik Bölümü */}
-        <Col span={24}>
-          <Card 
-            className="chart-card"
-            bordered={false}
-            title={<Title level={4}>En Çok Satan Ürünler</Title>}
+        <Col xs={24} xl={16}>
+          <ChartCard
+            title="Performance trend"
+            subtitle={bucketSizeFor(range) === 7 ? 'Weekly totals' : 'Daily totals'}
+            height={320}
+            loading={loading}
+            empty={empty}
+            ariaLabel={`Line chart of ${metric} over time compared with the previous period`}
+            extra={
+              <Segmented
+                aria-label="Trend metric"
+                value={metric}
+                onChange={(value) => setMetric(value as TrendMetric)}
+                options={[
+                  { label: 'Revenue', value: 'revenue' },
+                  { label: 'Orders', value: 'orders' },
+                ]}
+              />
+            }
           >
-            <div className="chart-container">
-              <Column {...columnConfig} />
-            </div>
+            <TrendChart current={series} previous={hasComparison ? previousSeries : []} metric={metric} height={320} />
+          </ChartCard>
+        </Col>
+        <Col xs={24} xl={8}>
+          <ChartCard
+            title="Sales by category"
+            height={320}
+            loading={loading}
+            empty={empty}
+            ariaLabel="Donut chart of revenue by product category"
+          >
+            <DonutChart data={categories.map((c) => ({ name: c.key, value: c.revenue }))} height={320} centerLabel="Revenue" order={CATEGORIES} />
+          </ChartCard>
+        </Col>
+
+        <Col xs={24} lg={12}>
+          <ChartCard
+            title="Top products"
+            subtitle="By revenue"
+            height={300}
+            loading={loading}
+            empty={empty}
+            ariaLabel="Bar chart of the top products by revenue"
+          >
+            <BarChart data={products.map((p) => ({ name: p.key, value: p.revenue }))} height={300} horizontal />
+          </ChartCard>
+        </Col>
+        <Col xs={24} lg={12}>
+          <ChartCard
+            title="Revenue by region"
+            height={300}
+            loading={loading}
+            empty={empty}
+            ariaLabel="Column chart of revenue by region"
+          >
+            <BarChart data={regions.map((r) => ({ name: r.key, value: r.revenue }))} height={300} color="#06b6d4" horizontal />
+          </ChartCard>
+        </Col>
+
+        <Col span={24}>
+          <Card
+            title="Recent orders"
+            extra={
+              <Button type="link" onClick={() => navigate('/sales')}>
+                View all
+              </Button>
+            }
+          >
+            <Table<Order>
+              size="small"
+              rowKey="id"
+              columns={columns}
+              dataSource={recent}
+              loading={loading}
+              pagination={false}
+              scroll={{ x: 'max-content' }}
+              locale={{ emptyText: 'No orders in this period' }}
+            />
           </Card>
         </Col>
       </Row>
-    </div>
-  );
-};
-
-export default Dashboard;
+    </>
+  )
+}

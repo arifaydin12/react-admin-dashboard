@@ -1,0 +1,1 @@
+import{k as a,j as t}from"./react-vendor-BUZ0L0T6.js";import{dz as e,dy as s}from"./vendor-DEN4UOnn.js";function i(){const o=a();return t.jsx(e,{status:"404",title:"Page not found",subTitle:"The page you are looking for does not exist.",extra:t.jsx(s,{type:"primary",onClick:()=>o("/"),children:"Back to dashboard"})})}export{i as default};

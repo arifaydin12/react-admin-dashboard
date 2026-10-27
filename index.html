@@ -2,9 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
+    <meta name="description" content="Pulse - a sales analytics dashboard with KPIs, trends, product and regional breakdowns." />
+    <meta name="color-scheme" content="light dark" />
+    <title>Pulse - Sales Analytics Dashboard</title>
+    <script>
+      // Apply the persisted theme before first paint to avoid a flash.
+      try {
+        var stored = JSON.parse(localStorage.getItem('pulse.theme') || 'null');
+        var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
